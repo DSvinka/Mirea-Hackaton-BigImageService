@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@kyvg/vue3-notification": "^3.3.0",
+    "@vue-leaflet/vue-leaflet": "^0.10.1",
+    "leaflet": "^1.9.4",
     "axios": "^1.7.7",
     "core-js": "^3.37.1",
     "pinia": "^2.2.4",
