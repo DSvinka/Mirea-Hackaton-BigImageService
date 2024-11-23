@@ -61,3 +61,4 @@ split_image_multithreaded(
     tile_height=2048,              # Высота плитки
     max_threads=12                 # Количество потоков
 )
+print("Катя настругала")
