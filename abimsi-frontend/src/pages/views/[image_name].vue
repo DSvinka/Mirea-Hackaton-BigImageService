@@ -48,7 +48,7 @@ const state = reactive({
 const scaleText = computed(() => `${(state.scale * 100).toFixed(2)} (${state.tileScale})`);
 
 const init = async () => {
-  const response = await fetch(`http://localhost:8000/info/${route.params.image_name}`);
+  const response = await fetch(`https://mirea.dsivnka.ru/api/info/${route.params.image_name}`);
   if (!response.ok) {
     throw new Error(`Response status: ${response.status}`);
   }
@@ -80,7 +80,7 @@ const loadTile = (row, col) => {
   }
 
   const img = new Image();
-  img.src = `http://127.0.0.1:8000/tiles/${route.params.image_name}/${state.tileScale}/${row * state.tileSize}_${col * state.tileSize}.png`;
+  img.src = `https://mirea.dsivnka.ru/api/tiles/${route.params.image_name}/${state.tileScale}/${row * state.tileSize}_${col * state.tileSize}.png`;
 
   img.onload = () => {
     state.tiles[tileKey] = { img, scale: state.tileScale };

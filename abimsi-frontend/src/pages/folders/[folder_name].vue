@@ -11,8 +11,8 @@
     >
       <v-card max-width="500" max-height="500" min-width="200" min-height="200">
         <v-img
-          lazy-src="http://localhost:8000/info/bio_cut/preview.png"
-          src="http://localhost:8000/info/bio_cut/preview.png"
+          lazy-src="https://mirea.dsivnka.ru/api/info/bio_cut/preview.png"
+          src="https://mirea.dsivnka.ru/api/info/bio_cut/preview.png"
           aspect-ratio="1"
           class="bg-grey-lighten-2"
           cover
