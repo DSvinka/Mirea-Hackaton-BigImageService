@@ -91,43 +91,65 @@ async function init() {
         const img = new Image();
         img.src = `http://127.0.0.1:8000/tiles/bio_cut/${tileScale}/${row * tileSize}_${col * tileSize}.png`;
 
-        tiles[tileKey] = {img: img, scale: tileScale};
+        // Загрузка изображения
+        img.onload = () => {
+            tiles[tileKey] = { img, scale: tileScale };
+            renderTiles(); // Перерисовываем после загрузки
+        };
+
+        img.onerror = () => {
+            console.error(`Ошибка загрузки изображения: ${img.src}`);
+        };
+
+        tiles[tileKey] = { img, scale: null }; // Помечаем тайл как "загружается"
         return tiles[tileKey];
     }
 
     // Отображение видимых тайлов
     function renderTiles() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const oldTiles = Object.assign({}, tiles)
 
         const startCol = Math.floor((-offsetX - canvas.width * buffer) / (tileSize * scale));
         const endCol = Math.ceil((-offsetX + canvas.width * (1 + buffer)) / (tileSize * scale));
         const startRow = Math.floor((-offsetY - canvas.height * buffer) / (tileSize * scale));
         const endRow = Math.ceil((-offsetY + canvas.height * (1 + buffer)) / (tileSize * scale));
 
-        try {
-            for (let row = startRow; row <= endRow; row++) {
-                for (let col = startCol; col <= endCol; col++) {
-                    if (
-                        row < 0 || col < 0 ||
-                        row * tileSize >= imageWidth ||
-                        col * tileSize >= imageHeight
-                    ) continue;
+        const newTiles = {}
+        let allNewTilesLoaded = true;
 
-                    const img = loadTile(row, col).img;
-                    const x = Math.round(offsetX + col * tileSize * scale);
-                    const y = Math.round(offsetY + row * tileSize * scale);
-                    const size = Math.round(tileSize * scale);
+        for (let row = startRow; row <= endRow; row++) {
+            for (let col = startCol; col <= endCol; col++) {
+                if (
+                    row < 0 || col < 0 ||
+                    row * tileSize >= imageWidth ||
+                    col * tileSize >= imageHeight
+                ) continue;
 
-                    if (img.complete) {
-                        ctx.drawImage(img, x - 1, y - 1, size + 2, size + 2);
+                const tileKey = `${row}_${col}`;
+                const cachedTile = tiles[tileKey];
+                const x = Math.round(offsetX + col * tileSize * scale);
+                const y = Math.round(offsetY + row * tileSize * scale);
+                const size = Math.round(tileSize * scale);
+
+                if (cachedTile && cachedTile.img.complete) {
+                    ctx.drawImage(cachedTile.img, x, y, size, size);
+                    newTiles[tileKey] = cachedTile;
+                } else {
+                    const tile = loadTile(row, col);
+                    if (tile.img.complete) {
+                        ctx.drawImage(tile.img, x, y, size, size);
+                        newTiles[tileKey] = tile;
                     } else {
-                        img.onload = () => ctx.drawImage(img, x - 1, y - 1, size + 2, size + 2);
+                        allNewTilesLoaded = false;
                     }
                 }
             }
         }
-        catch (error) {
-            console.log(error);
+
+        if (allNewTilesLoaded) {
+            Object.keys(oldTiles).forEach(key => {
+                if (!newTiles[key]) delete tiles[key];
+            });
         }
     }
 
@@ -137,6 +159,8 @@ async function init() {
         offsetX = mouseX - (mouseX - offsetX) * (newScale / scale);
         offsetY = mouseY - (mouseY - offsetY) * (newScale / scale);
         scale = newScale;
+        const previousTileScale = tileScale;
+
         scaleText.textContent = `${(scale * 100).toFixed(2)} (${tileScale})`;
 
         if (scale*100 > 30) {
@@ -147,6 +171,10 @@ async function init() {
         }
         else {
             tileScale = 5
+        }
+
+        if (tileScale !== previousTileScale) {
+            Object.keys(tiles).forEach(key => delete tiles[key]); // Очистка кэша
         }
 
         renderTiles();
