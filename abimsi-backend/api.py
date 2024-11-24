@@ -3,6 +3,7 @@ import os
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from starlette.responses import FileResponse, JSONResponse
 
 from config import TILES_DIR
@@ -31,21 +32,83 @@ def read_root():
 
 
 @app.get("/api/info/{image_name}")
-async def get_tile(image_name: str):
+async def get_info(image_name: str):
     file_path = os.path.join(TILES_DIR, image_name, f"info.json")
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Info not found")
 
-    info = json.load(open(file_path, "rb"))
+    info = json.load(open(file_path, "r", encoding="utf8"))
     return JSONResponse(info)
 
 @app.get("/api/info/{image_name}/preview.png")
-async def get_tile(image_name: str):
+async def get_preview(image_name: str):
     file_path = os.path.join(TILES_DIR, image_name, f"preview.png")
     if not os.path.exists(file_path):
         raise HTTPException(status_code=404, detail="Preview not found")
 
     return FileResponse(file_path)
+
+
+class MarkerRequest(BaseModel):
+    x: int
+    y: int
+    text: str
+
+
+@app.post("/api/info/{image_name}/markers")
+async def post_marker(image_name: str, data: MarkerRequest):
+    file_path = os.path.join(TILES_DIR, image_name, f"info.json")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Info not found")
+
+    # Делаем на скорую руку, лучше базу данных.
+    with open(file_path, "r", encoding="utf8") as jsonFile:
+        info = json.load(jsonFile)
+
+    info["markers"][len(info["markers"])+1] = {
+        "x": data.x,
+        "y": data.y,
+        "text": data.text
+    }
+
+    with open(file_path, 'w', encoding="utf8") as f:
+        json.dump(info, f, )
+        print(f"Файл перезаписан: {info}")
+
+    return JSONResponse(info)
+
+@app.delete("/api/info/{image_name}/markers/{marker_id}")
+async def delete_marker(image_name: str):
+    file_path = os.path.join(TILES_DIR, image_name, f"info.json")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Info not found")
+
+    with open(file_path, "r", encoding="utf8") as jsonFile:
+        info = json.load(jsonFile)
+
+    del info["markers"]["marker_id"]
+
+    with open(file_path, 'w') as f:
+        json.dump(info, f)
+
+    return JSONResponse(info)
+
+@app.delete("/api/info/{image_name}/markers")
+async def delete_markers(image_name: str):
+    file_path = os.path.join(TILES_DIR, image_name, f"info.json")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Info not found")
+
+    with open(file_path, "r", encoding="utf8") as jsonFile:
+        info = json.load(jsonFile)
+
+    info["markers"] = {}
+
+    with open(file_path, 'w', encoding="utf8") as f:
+        json.dump(info, f)
+
+    return JSONResponse(info)
+
 
 @app.get("/api/tiles/{image_name}/{size}/{x}_{y}.png")
 async def get_tile(image_name: str, size: int, x: int, y: int):

@@ -5,6 +5,10 @@
         <v-btn class="mx-1 my-1 bg-amber-lighten-4" variant="text" @click="zoomIn">Увеличить</v-btn>
         <v-btn class="mx-1 my-1 bg-amber-lighten-4" variant="text" @click="zoomOut">Уменьшить</v-btn>
         <v-btn class="mx-1 my-1 bg-red-lighten-4" variant="text" @click="resetView">Сбросить</v-btn>
+
+        <v-btn class="mx-1 my-1 bg-green-lighten-4" variant="text" @click="addMarker">Добавить метку</v-btn>
+        <v-btn class="mx-1 my-1 bg-red-lighten-4" variant="text" @click="clearMarkers">Сбросить метки</v-btn>
+
         <span class="ml-3">Масштаб: {{ scaleText }}</span>
       </v-card>
     </div>
@@ -43,17 +47,23 @@ const state = reactive({
   startX: 0,
   startY: 0,
   tiles: {},
+  markers: []
 });
 
 const scaleText = computed(() => `${(state.scale * 100).toFixed(2)} (${state.tileScale})`);
 
 const init = async () => {
-  const response = await fetch(`https://mirea.dsivnka.ru/api/info/${route.params.image_name}`);
+  const response = await fetch(`https://mirea.dsvinka.ru/api/info/${route.params.image_name}`);
   if (!response.ok) {
     throw new Error(`Response status: ${response.status}`);
   }
 
   const result = await response.json();
+
+  for (let key in result.markers) {
+    state.markers.push( {id: key, ...result.markers[key]} );
+  }
+
   state.imageWidth = result.size[0];
   state.imageHeight = result.size[1];
 
@@ -64,6 +74,9 @@ const init = async () => {
   ctx.value.imageSmoothingEnabled = false;
 
   window.addEventListener("resize", resizeCanvas);
+
+// Добавляем обработчик клика на холст
+  canvas.value.addEventListener("contextmenu", addMarker);
   renderTiles();
 };
 
@@ -80,7 +93,7 @@ const loadTile = (row, col) => {
   }
 
   const img = new Image();
-  img.src = `https://mirea.dsivnka.ru/api/tiles/${route.params.image_name}/${state.tileScale}/${row * state.tileSize}_${col * state.tileSize}.png`;
+  img.src = `https://mirea.dsvinka.ru/api/tiles/${route.params.image_name}/${state.tileScale}/${row * state.tileSize}_${col * state.tileSize}.png`;
 
   img.onload = () => {
     state.tiles[tileKey] = { img, scale: state.tileScale };
@@ -127,6 +140,8 @@ const renderTiles = () => {
       }
     }
   }
+
+  renderMarkers();
 };
 
 const zoom = (factor, mouseX, mouseY) => {
@@ -198,6 +213,48 @@ const handleWheel = (event) => {
 };
 
 onMounted(init);
+
+// Состояние для меток
+state.markers = reactive([]); // [{ x: 100, y: 200, text: "Пример" }]
+
+const addMarker = (event) => {
+  const rect = canvas.value.getBoundingClientRect();
+  const x = (event.clientX - rect.left - state.offsetX) / state.scale;
+  const y = (event.clientY - rect.top - state.offsetY) / state.scale;
+
+  const markerText = prompt("Введите текст для метки:", "Новая метка");
+  if (markerText) {
+    state.markers.push({ x, y, text: markerText });
+    fetch(`https://mirea.dsvinka.ru/api/info/${route.params.image_name}/markers`,
+      {method: 'POST', body: JSON.stringify({x: x, y: y, text: markerText}), headers: {'Content-Type': 'application/json'}})
+    renderTiles();
+  }
+};
+
+const clearMarkers = () => {
+  if (confirm("Вы уверены, что хотите удалить все метки?")) {
+    state.markers = [];
+    fetch(`https://mirea.dsvinka.ru/api/info/${route.params.image_name}/markers`, {method: 'DELETE'})
+    renderTiles();
+  }
+};
+
+const renderMarkers = () => {
+  state.markers.forEach((marker) => {
+    const x = state.offsetX + marker.x * state.scale;
+    const y = state.offsetY + marker.y * state.scale;
+
+    ctx.value.fillStyle = "red";
+    ctx.value.beginPath();
+    ctx.value.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.value.fill();
+
+    ctx.value.fillStyle = "black";
+    ctx.value.font = "12px Arial";
+    ctx.value.fillText(marker.text, x + 10, y - 10);
+  });
+};
+
 </script>
 
 <style>
