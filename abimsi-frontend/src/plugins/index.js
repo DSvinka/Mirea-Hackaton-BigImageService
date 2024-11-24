@@ -5,6 +5,8 @@ import notify from './notify'
 
 import router from '@/router'
 
+import { DataLoaderPlugin} from 'unplugin-vue-router/data-loaders'
+
 export function registerPlugins (app) {
   app
     .use(vuetify)
@@ -12,5 +14,6 @@ export function registerPlugins (app) {
     .use(pinia)
     .use(notify)
 
+    .use(DataLoaderPlugin, {router})
     .use(router)
 }

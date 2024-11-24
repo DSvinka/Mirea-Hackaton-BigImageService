@@ -3,9 +3,7 @@
 </script>
 
 <template>
-  <div class="container">
-    Index
-  </div>
+  <v-img max-width="50%" max-height="50%" class="mx-auto" style="margin-top: 10%" src="https://http.cat/403"></v-img>
 </template>
 
 <style scoped lang="sass">

@@ -131,9 +131,10 @@ watch(
 <template>
   <v-container>
     <v-file-input
-      label="Выберите файл"
+      label="Выберите файл *"
       @change="getFileContext"
       outlined
+      disabled
     />
     <v-progress-linear
       v-if="showProgress"
