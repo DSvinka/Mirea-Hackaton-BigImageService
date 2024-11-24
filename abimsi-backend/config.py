@@ -1,0 +1,1 @@
+TILES_DIR = "tiles"
